@@ -2,13 +2,18 @@ var express = require('express'),
     request = require('request'),
     bodyParser = require('body-parser'),
     app = express();
+var multer  = require('multer')
+var upload = multer()
 
 var myLimit = typeof(process.argv[2]) != 'undefined' ? process.argv[2] : '100kb';
 console.log('Using limit: ', myLimit);
 
 app.use(bodyParser.json({limit: myLimit}));
+app.use(bodyParser.urlencoded({ extended:true }))
 
-app.all('*', function (req, res, next) {
+//var urlencodedParser = bodyParser.urlencoded({extended: false});
+
+app.all('*', upload.any(), function (req, res, next) {
 
     // Set CORS headers: allow all origins, methods, and headers: you may want to lock this down in a production environment
     res.header("Access-Control-Allow-Origin", "*");
@@ -19,15 +24,17 @@ app.all('*', function (req, res, next) {
         // CORS Preflight
         res.send();
     } else {
+
+        console.log(req)
         var targetURL = req.header('Target-URL');
         if (!targetURL) {
             res.send(500, { error: 'There is no Target-Endpoint header in the request' });
             return;
         }
-        request({ url: targetURL + req.url, method: req.method, json: req.body, headers: {'Authorization': req.header('Authorization')} },
+        request({ url: targetURL, method: req.method, json: req.body, headers: {'Authorization': req.header('Authorization')}},
             function (error, response, body) {
                 if (error) {
-                    console.error('error: ' + response.statusCode)
+                    console.error('error: ' + error)
                 }
             }).pipe(res);
     }
